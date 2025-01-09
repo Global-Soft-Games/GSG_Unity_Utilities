@@ -1,0 +1,17 @@
+{
+    "name": "com.globalsoft.unityutilities",
+    "version": "1.0.0",
+    "displayName": "Global Soft Games Unity Utilities",
+    "description": "A plugin for Unity.",
+    "unity": "2022.3",
+    "author": {
+        "name": "Global Soft Games",
+        "email": "service@globalsoft.games",
+        "url": "https://globalsoft.games"
+    },
+    "dependencies": {
+        "com.unity.textmeshpro": "3.0.6",
+        "com.unity.ugui": "1.0.0",
+        "com.unity.editorcoroutines": "1.0.0"
+    }
+}

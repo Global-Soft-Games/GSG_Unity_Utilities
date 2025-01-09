@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "com.globalsoft.unityutilities": "https://github.com/Global-Soft-Games/GSG_Unity_Utility_Package.git?path=/GSG_Unity_Utility_Package#1.0.0"
+  }
+}
