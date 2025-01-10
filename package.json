@@ -1,6 +1,6 @@
 {
     "name": "com.globalsoft.unityutilities",
-    "version": "1.0.2",
+    "version": "1.0.2.1",
     "displayName": "Global Soft Games Unity Utilities",
     "description": "A plugin for Unity.",
     "unity": "2022.3",
