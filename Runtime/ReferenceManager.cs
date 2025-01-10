@@ -3,12 +3,38 @@ using UnityEngine;
 
 public interface IReference
 {
-    // 在这里可以定义一些通用的接口方法或属性
+    public void Init();
+    public void Release();
 }
 
-public class ReferenceManager : Singleton<ReferenceManager>
+public interface IReferenceManager : IReference
 {
-    private Dictionary<string, IReference> _references = new Dictionary<string, IReference>();
+    Dictionary<string, IReference> ReferenceMap { get; }
+    void AddReference<T>(T reference) where T : IReference;
+    void RemoveReference<T>(T reference) where T : IReference;
+    T GetReference<T>() where T : class, IReference;
+    bool ContainsReference<T>() where T : class, IReference;
+}
+
+public class ReferenceManager : Singleton<ReferenceManager>, IReferenceManager
+{
+    public Dictionary<string, IReference> ReferenceMap { get; private set; } = new Dictionary<string, IReference>();
+
+    public void Init()
+    {
+        ReferenceMap = new Dictionary<string, IReference>()
+        {
+            { typeof(IReferenceManager).Name, this },
+        };
+
+        Debug.Log("ReferenceManager Init");
+    }
+
+    public void Release()
+    {
+        ReferenceMap.Clear();
+        Debug.Log("ReferenceManager Release");
+    }
 
     // 添加引用
     public void AddReference<T>(T reference) where T : IReference
@@ -16,9 +42,9 @@ public class ReferenceManager : Singleton<ReferenceManager>
         string key = typeof(T).Name;
         Debug.Log($"ReferenceManager: AddReference {key}");
 
-        if (!_references.ContainsKey(key))
+        if (!ReferenceMap.ContainsKey(key))
         {
-            _references.Add(key, reference);
+            ReferenceMap.Add(key, reference);
         }
         else
         {
@@ -32,9 +58,9 @@ public class ReferenceManager : Singleton<ReferenceManager>
         string key = typeof(T).Name;
         Debug.Log($"ReferenceManager: GetReference {key}");
 
-        if (_references.ContainsKey(key))
+        if (ReferenceMap.ContainsKey(key))
         {
-            return _references[key] as T;
+            return ReferenceMap[key] as T;
         }
         else
         {
@@ -49,18 +75,18 @@ public class ReferenceManager : Singleton<ReferenceManager>
         string key = typeof(T).Name;
         Debug.Log($"ReferenceManager: ContainsReference {key}");
 
-        return _references.ContainsKey(key);
+        return ReferenceMap.ContainsKey(key);
     }
 
     // 移除引用
-    public void RemoveReference<T>(T reference) where T : class, IReference
+    public void RemoveReference<T>(T reference) where T : IReference
     {
         string key = typeof(T).Name;
         Debug.Log($"ReferenceManager: RemoveReference {key}");
-        
-        if (_references.ContainsKey(key))
+
+        if (ReferenceMap.ContainsKey(key))
         {
-            _references.Remove(key);
+            ReferenceMap.Remove(key);
         }
         else
         {
