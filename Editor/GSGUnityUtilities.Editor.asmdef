@@ -1,7 +1,9 @@
 {
     "name": "GSGUnityUtilities.Editor",
     "rootNamespace": "GSGUnityUtilities.Editor",
-    "references": [],
+    "references": [
+        "GUID:b6acef0c2a2ec47bb823b006502beaaf"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
