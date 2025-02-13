@@ -29,7 +29,7 @@ public static class CreateAssetMenuExProcessor
     /// </summary>
     private static void RegisterMenuItem(Type type, string menuName)
     {
-        string path = $"Assets/Create/{menuName}";
+        string path = $"Assets/{menuName}";
         string methodName = $"Create_{type.Name}";
 
         // 使用反射動態建立 `MenuItem`
