@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.14] - 2025-03-05
+- Add GSG_Unity_Utilities.asmdef
+
 ## [1.0.13] - 2025-03-05
 - Remove Editor Asmdef
 
