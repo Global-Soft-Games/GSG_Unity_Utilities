@@ -2,7 +2,8 @@
     "name": "GSGUnityUtilities.Editor",
     "rootNamespace": "GSGUnityUtilities.Editor",
     "references": [
-        "GUID:b6acef0c2a2ec47bb823b006502beaaf"
+        "GUID:b6acef0c2a2ec47bb823b006502beaaf",
+        "GUID:343deaaf83e0cee4ca978e7df0b80d21"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

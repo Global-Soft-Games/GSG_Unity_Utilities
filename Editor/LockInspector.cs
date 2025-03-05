@@ -1,9 +1,11 @@
 using UnityEditor;
 using UnityEngine;
 
-public class LockInspector : EditorWindow
+namespace GSGUnityUtilities.Editor
 {
-    [MenuItem("Tools/Lock Inspector %l")]
+    public class LockInspector : EditorWindow
+    {
+        [MenuItem("Tools/Lock Inspector %l")]
     public static void ToggleLock()
     {
         // Accessing the active inspector window
@@ -18,6 +20,7 @@ public class LockInspector : EditorWindow
             bool value = (bool)propertyInfo.GetValue(inspectorWindow, null);
             propertyInfo.SetValue(inspectorWindow, !value, null);
             inspectorWindow.Repaint();
+        }
         }
     }
 }

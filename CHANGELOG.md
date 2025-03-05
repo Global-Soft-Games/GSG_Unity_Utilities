@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.11] - 2025-03-05
+- Add namespace for SceneReferenceDrawer, LockInspector
+
 ## [1.0.10] -2025-02-25
 - Add namespace for Tween
 
