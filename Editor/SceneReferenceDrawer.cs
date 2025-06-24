@@ -1,3 +1,4 @@
+#if GSG_EDITOR_TOOLS_ENABLED || GSG_CORE_ENABLED
 using UnityEditor;
 using UnityEngine;
 using GSGUnityUtilities.Runtime;
@@ -40,4 +41,5 @@ namespace GSGUnityUtilities.Editor
             EditorGUI.EndProperty();
         }
     }
-} 
+}
+#endif 

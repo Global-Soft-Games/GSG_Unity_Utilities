@@ -1,3 +1,4 @@
+#if GSG_EDITOR_TOOLS_ENABLED || GSG_CORE_ENABLED
 using UnityEditor;
 using UnityEngine;
 
@@ -24,3 +25,4 @@ namespace GSGUnityUtilities.Editor
         }
     }
 }
+#endif

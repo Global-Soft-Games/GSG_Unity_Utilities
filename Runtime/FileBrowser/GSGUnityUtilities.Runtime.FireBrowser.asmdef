@@ -1,21 +1,17 @@
 {
-    "name": "GSGUnityUtilities.Editor",
-    "rootNamespace": "GSGUnityUtilities.Editor",
+    "name": "GSGUnityUtilities.Runtime.FireBrowser",
+    "rootNamespace": "",
     "references": [
-        "GUID:5ee819a02d7fd584791a2ddbdaff1b1f",
         "GUID:d3ed6ccebd31a456bb5e6a6058241f5c",
-        "GUID:68bd7fdb68ef2684e982e8a9825b18a5",
         "GUID:6055be8ebefd69e48b49212b09b47b2f"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [],
+    "defineConstraints": ["GSG_MODULE_DISABLED_GSGUNITYUTILITIES_RUNTIME_FIREBROWSER"],
     "versionDefines": [],
     "noEngineReferences": false
 }
