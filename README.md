@@ -2,7 +2,7 @@
 
 [![Unity Version](https://img.shields.io/badge/Unity-2022.3+-blue.svg)](https://unity3d.com/get-unity/download)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Package](https://img.shields.io/badge/Package-v1.0.16-orange.svg)](CHANGELOG.md)
+[![Package](https://img.shields.io/badge/Package-v1.0.17-orange.svg)](CHANGELOG.md)
 
 > 由 **Global Soft Games** 開發的**模組化** Unity 實用工具套件
 > 

@@ -172,10 +172,16 @@ com.globalsoft.unityutilities.steamworks
 Unity Editor > Tools > GSG Unity Utilities > Module Manager
 ```
 
-### 功能特色
+### 功能特色 (v1.0.17 更新)
 - ✅ 視覺化模組選擇
 - ✅ 自動相依性檢查
-- ✅ 套件相依性驗證
+- ✅ 智能套件管理系統 (NEW!)
+  - 內部套件：Unity Package Manager 自動安裝
+  - 外部套件：自動開啟下載頁面 + 安裝指南
+- ✅ 雙重套件檢測機制
+  - Package Manager API 檢測
+  - manifest.json 備用檢查
+- ✅ Assembly Define 動態管理
 - ✅ 編譯符號管理
 - ✅ 配置匯出/導入
 

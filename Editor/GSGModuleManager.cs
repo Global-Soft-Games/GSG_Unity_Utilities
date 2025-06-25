@@ -32,6 +32,9 @@ namespace GSGUnityUtilities.Editor
             public string minVersion;
             public string assemblyDefPath;  // 新增：Assembly Define 檔案路徑
             public string assemblyName;     // 新增：Assembly 名稱
+            public bool isExternalPackage;  // 新增：是否為外部套件
+            public string downloadUrl;      // 新增：外部套件下載連結
+            public string installInstructions; // 新增：安裝說明
         }
         
         private List<ModuleInfo> modules = new List<ModuleInfo>
@@ -45,7 +48,8 @@ namespace GSGUnityUtilities.Editor
                 isCore = true,
                 dependencies = new string[0],
                 assemblyDefPath = "Assets/GSG_Unity_Utilities/Runtime/Core/GSGUnityUtilities.Runtime.Core.asmdef",
-                assemblyName = "GSGUnityUtilities.Runtime.Core"
+                assemblyName = "GSGUnityUtilities.Runtime.Core",
+                isExternalPackage = false
             },
             new ModuleInfo
             {
@@ -56,7 +60,8 @@ namespace GSGUnityUtilities.Editor
                 isCore = false,
                 dependencies = new string[] { "GSG_CORE_ENABLED" },
                 assemblyDefPath = "Assets/GSG_Unity_Utilities/Runtime/UIExtensions/GSGUnityUtilities.Runtime.UIExtensions.asmdef",
-                assemblyName = "GSGUnityUtilities.Runtime.UIExtensions"
+                assemblyName = "GSGUnityUtilities.Runtime.UIExtensions",
+                isExternalPackage = false
             },
             new ModuleInfo
             {
@@ -66,10 +71,13 @@ namespace GSGUnityUtilities.Editor
                 isEnabled = false,
                 isCore = false,
                 dependencies = new string[] { "GSG_CORE_ENABLED" },
-                packageDependency = "com.rlabrecque.steamworks.net",
+                packageDependency = "Steamworks.NET",
                 minVersion = "12.0.0",
                 assemblyDefPath = "Assets/GSG_Unity_Utilities/Runtime/Steamworks/GSGUnityUtilities.Runtime.Steamworks.asmdef",
-                assemblyName = "GSGUnityUtilities.Runtime.Steamworks"
+                assemblyName = "GSGUnityUtilities.Runtime.Steamworks",
+                isExternalPackage = true,
+                downloadUrl = "https://github.com/rlabrecque/Steamworks.NET/releases",
+                installInstructions = "1. 前往 GitHub 下載最新版本\n2. 將 UnityPackage 匯入到專案中\n3. 確保 steam_appid.txt 在專案根目錄"
             },
             new ModuleInfo
             {
@@ -80,7 +88,8 @@ namespace GSGUnityUtilities.Editor
                 isCore = false,
                 dependencies = new string[] { "GSG_CORE_ENABLED" },
                 assemblyDefPath = "Assets/GSG_Unity_Utilities/Runtime/FileBrowser/GSGUnityUtilities.Runtime.FireBrowser.asmdef",
-                assemblyName = "GSGUnityUtilities.Runtime.FireBrowser"
+                assemblyName = "GSGUnityUtilities.Runtime.FireBrowser",
+                isExternalPackage = false // 這是內建的，不需要外部套件
             }
         };
         
@@ -262,14 +271,15 @@ namespace GSGUnityUtilities.Editor
                 if (!string.IsNullOrEmpty(module.packageDependency))
                 {
                     bool packageExists = GetCachedPackageStatus(module.packageDependency);
-                    string packageText = $"套件相依性: {module.packageDependency}";
+                    string packageType = module.isExternalPackage ? "外部套件" : "內部套件";
+                    string packageText = $"{packageType}: {module.packageDependency}";
                     if (!string.IsNullOrEmpty(module.minVersion))
                     {
                         packageText += $" (>= {module.minVersion})";
                     }
                     
                     var packageStyle = new GUIStyle(EditorStyles.miniLabel);
-                    if (isCheckingPackages)
+                    if (isCheckingPackages && !module.isExternalPackage)
                     {
                         packageStyle.normal.textColor = Color.yellow;
                         packageText += " (檢查中...)";
@@ -277,12 +287,19 @@ namespace GSGUnityUtilities.Editor
                     else
                     {
                         packageStyle.normal.textColor = packageExists ? Color.green : Color.red;
+                        if (module.isExternalPackage)
+                        {
+                            packageText += packageExists ? " ✓ 已安裝" : " ✗ 未安裝";
+                        }
                     }
                     EditorGUILayout.LabelField(packageText, packageStyle);
                     
                     if (!packageExists && module.isEnabled && !isCheckingPackages)
                     {
-                        EditorGUILayout.HelpBox($"警告：缺少必要套件 {module.packageDependency}", MessageType.Warning);
+                        string warningMsg = module.isExternalPackage ? 
+                            $"警告：缺少外部套件 {module.packageDependency}，請手動安裝" :
+                            $"警告：缺少必要套件 {module.packageDependency}";
+                        EditorGUILayout.HelpBox(warningMsg, MessageType.Warning);
                     }
                 }
                 
@@ -538,19 +555,43 @@ namespace GSGUnityUtilities.Editor
                     bool packageExists = GetCachedPackageStatus(module.packageDependency);
                     if (!packageExists)
                     {
-                        bool install = EditorUtility.DisplayDialog("缺少套件", 
-                            $"模組 '{module.name}' 需要套件 '{module.packageDependency}'。\n是否要安裝此套件？", 
-                            "安裝", "取消");
-                        
-                        if (install)
+                        if (module.isExternalPackage)
                         {
-                            UnityEditor.PackageManager.Client.Add(module.packageDependency);
-                            EditorUtility.DisplayDialog("套件安裝", "套件安裝已開始，請等待完成後重新套用設定。", "確定");
+                            // 外部套件：提供下載連結和安裝說明
+                            string message = $"模組 '{module.name}' 需要外部套件 '{module.packageDependency}'。\n\n";
+                            message += "安裝說明：\n" + module.installInstructions;
+                            
+                            bool openUrl = EditorUtility.DisplayDialog("需要外部套件", 
+                                message, 
+                                "打開下載頁面", "取消");
+                            
+                            if (openUrl && !string.IsNullOrEmpty(module.downloadUrl))
+                            {
+                                Application.OpenURL(module.downloadUrl);
+                                EditorUtility.DisplayDialog("安裝提醒", 
+                                    "請完成套件安裝後重新套用設定。\n\n" +
+                                    "💡 提示：安裝完成後，可以點選「🔄 重新整理」按鈕更新套件狀態。", 
+                                    "確定");
+                            }
                             return;
                         }
                         else
                         {
-                            return;
+                            // 內部套件：自動安裝
+                            bool install = EditorUtility.DisplayDialog("缺少套件", 
+                                $"模組 '{module.name}' 需要套件 '{module.packageDependency}'。\n是否要自動安裝此套件？", 
+                                "安裝", "取消");
+                            
+                            if (install)
+                            {
+                                UnityEditor.PackageManager.Client.Add(module.packageDependency);
+                                EditorUtility.DisplayDialog("套件安裝", "套件安裝已開始，請等待完成後重新套用設定。", "確定");
+                                return;
+                            }
+                            else
+                            {
+                                return;
+                            }
                         }
                     }
                 }
@@ -688,8 +729,18 @@ namespace GSGUnityUtilities.Editor
                 {
                     if (!string.IsNullOrEmpty(module.packageDependency))
                     {
-                        bool exists = request.Result.Any(package => package.name == module.packageDependency);
-                        packageCache[module.packageDependency] = exists;
+                        if (module.isExternalPackage && module.packageDependency == "Steamworks.NET")
+                        {
+                            // Steamworks.NET 對應的實際套件名稱
+                            bool exists = request.Result.Any(package => package.name == "com.rlabrecque.steamworks.net");
+                            packageCache["com.rlabrecque.steamworks.net"] = exists;
+                        }
+                        else
+                        {
+                            // 一般套件直接檢查
+                            bool exists = request.Result.Any(package => package.name == module.packageDependency);
+                            packageCache[module.packageDependency] = exists;
+                        }
                     }
                 }
             }
@@ -700,7 +751,43 @@ namespace GSGUnityUtilities.Editor
         
         private bool GetCachedPackageStatus(string packageName)
         {
+            var module = modules.FirstOrDefault(m => m.packageDependency == packageName);
+            if (module != null && module.isExternalPackage)
+            {
+                // 對於外部套件，檢查Package Manager中是否有對應套件
+                if (packageName == "Steamworks.NET")
+                {
+                    // 檢查是否有安裝 com.rlabrecque.steamworks.net
+                    return packageCache.ContainsKey("com.rlabrecque.steamworks.net") ? 
+                           packageCache["com.rlabrecque.steamworks.net"] : 
+                           CheckSteamworksInManifest();
+                }
+                // 可以在此添加其他外部套件的檢查邏輯
+            }
+            
+            // 內部套件使用快取檢查
             return packageCache.ContainsKey(packageName) ? packageCache[packageName] : false;
+        }
+        
+        /// <summary>
+        /// 檢查 manifest.json 中是否包含 Steamworks.NET
+        /// </summary>
+        private bool CheckSteamworksInManifest()
+        {
+            try
+            {
+                string manifestPath = "Packages/manifest.json";
+                if (File.Exists(manifestPath))
+                {
+                    string content = File.ReadAllText(manifestPath);
+                    return content.Contains("com.rlabrecque.steamworks.net");
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[GSG Module Manager] 無法讀取 manifest.json: {e.Message}");
+            }
+            return false;
         }
         
         private void CleanupUnusedDefineSymbols()
