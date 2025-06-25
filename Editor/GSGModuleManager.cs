@@ -9,7 +9,7 @@ namespace GSGUnityUtilities.Editor
 {
     /// <summary>
     /// GSG Unity Utilities 模組管理器
-    /// 用於管理和配置各種功能模組的啟用狀態
+    /// 用於管理和配置各種功能模組的啟用狀態（僅使用 Define Symbols）
     /// </summary>
     public class GSGModuleManager : EditorWindow
     {
@@ -30,11 +30,9 @@ namespace GSGUnityUtilities.Editor
             public string[] dependencies;
             public string packageDependency;
             public string minVersion;
-            public string assemblyDefPath;  // 新增：Assembly Define 檔案路徑
-            public string assemblyName;     // 新增：Assembly 名稱
-            public bool isExternalPackage;  // 新增：是否為外部套件
-            public string downloadUrl;      // 新增：外部套件下載連結
-            public string installInstructions; // 新增：安裝說明
+            public bool isExternalPackage;
+            public string downloadUrl;
+            public string installInstructions;
         }
         
         private List<ModuleInfo> modules = new List<ModuleInfo>
@@ -47,8 +45,6 @@ namespace GSGUnityUtilities.Editor
                 isEnabled = true,
                 isCore = true,
                 dependencies = new string[0],
-                assemblyDefPath = "Assets/GSG_Unity_Utilities/Runtime/Core/GSGUnityUtilities.Runtime.Core.asmdef",
-                assemblyName = "GSGUnityUtilities.Runtime.Core",
                 isExternalPackage = false
             },
             new ModuleInfo
@@ -59,8 +55,6 @@ namespace GSGUnityUtilities.Editor
                 isEnabled = true,
                 isCore = false,
                 dependencies = new string[] { "GSG_CORE_ENABLED" },
-                assemblyDefPath = "Assets/GSG_Unity_Utilities/Runtime/UIExtensions/GSGUnityUtilities.Runtime.UIExtensions.asmdef",
-                assemblyName = "GSGUnityUtilities.Runtime.UIExtensions",
                 isExternalPackage = false
             },
             new ModuleInfo
@@ -73,8 +67,6 @@ namespace GSGUnityUtilities.Editor
                 dependencies = new string[] { "GSG_CORE_ENABLED" },
                 packageDependency = "Steamworks.NET",
                 minVersion = "12.0.0",
-                assemblyDefPath = "Assets/GSG_Unity_Utilities/Runtime/Steamworks/GSGUnityUtilities.Runtime.Steamworks.asmdef",
-                assemblyName = "GSGUnityUtilities.Runtime.Steamworks",
                 isExternalPackage = true,
                 downloadUrl = "https://github.com/rlabrecque/Steamworks.NET/releases",
                 installInstructions = "1. 前往 GitHub 下載最新版本\n2. 將 UnityPackage 匯入到專案中\n3. 確保 steam_appid.txt 在專案根目錄"
@@ -87,9 +79,7 @@ namespace GSGUnityUtilities.Editor
                 isEnabled = true,
                 isCore = false,
                 dependencies = new string[] { "GSG_CORE_ENABLED" },
-                assemblyDefPath = "Assets/GSG_Unity_Utilities/Runtime/FileBrowser/GSGUnityUtilities.Runtime.FireBrowser.asmdef",
-                assemblyName = "GSGUnityUtilities.Runtime.FireBrowser",
-                isExternalPackage = false // 這是內建的，不需要外部套件
+                isExternalPackage = false
             }
         };
         
@@ -127,8 +117,10 @@ namespace GSGUnityUtilities.Editor
                 alignment = TextAnchor.MiddleCenter
             };
             EditorGUILayout.LabelField("🎮 GSG Unity Utilities", titleStyle);
-            EditorGUILayout.LabelField("模組管理器", EditorStyles.centeredGreyMiniLabel);
+            EditorGUILayout.LabelField("模組管理器 (Define Symbols Only)", EditorStyles.centeredGreyMiniLabel);
             
+            EditorGUILayout.Space(5);
+            EditorGUILayout.HelpBox("💡 注意：此版本僅使用 Define Symbols 控制模組，適用於 Package Manager 安裝的插件", MessageType.Info);
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("選擇要啟用的功能模組：", EditorStyles.boldLabel);
             EditorGUILayout.Space(5);
@@ -182,46 +174,18 @@ namespace GSGUnityUtilities.Editor
             // 狀態指示
             string statusText = module.isCore ? "核心模組" : (module.isEnabled ? "✓ 啟用" : "✗ 停用");
             
-            // 檢查 Assembly Define 狀態
-            bool asmdefEnabled = string.IsNullOrEmpty(module.assemblyDefPath) || 
-                               IsAssemblyDefEnabled(module.assemblyDefPath);
-            
-            if (!module.isCore && !string.IsNullOrEmpty(module.assemblyDefPath))
-            {
-                if (module.isEnabled && asmdefEnabled)
-                {
-                    statusText = "✓ 完全啟用";
-                }
-                else if (module.isEnabled && !asmdefEnabled)
-                {
-                    statusText = "⚠ 部分啟用";
-                }
-                else if (!module.isEnabled && !asmdefEnabled)
-                {
-                    statusText = "✗ 完全停用";
-                }
-                else
-                {
-                    statusText = "⚠ 不一致";
-                }
-            }
-            
             var statusStyle = new GUIStyle(EditorStyles.miniLabel);
             if (module.isCore)
             {
                 statusStyle.normal.textColor = Color.blue;
             }
-            else if (module.isEnabled && asmdefEnabled)
+            else if (module.isEnabled)
             {
                 statusStyle.normal.textColor = Color.green;
             }
-            else if (!module.isEnabled && !asmdefEnabled)
-            {
-                statusStyle.normal.textColor = Color.red;
-            }
             else
             {
-                statusStyle.normal.textColor = Color.yellow; // 不一致狀態
+                statusStyle.normal.textColor = Color.red;
             }
             
             EditorGUILayout.LabelField(statusText, statusStyle, GUILayout.Width(80));
@@ -230,28 +194,6 @@ namespace GSGUnityUtilities.Editor
             
             // 模組描述
             EditorGUILayout.LabelField(module.description, EditorStyles.wordWrappedMiniLabel);
-            
-            // Assembly Define 信息
-            if (!string.IsNullOrEmpty(module.assemblyDefPath))
-            {
-                EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.Space(20);
-                
-                bool asmdefFileExists = File.Exists(module.assemblyDefPath);
-                bool asmdefIsEnabled = IsAssemblyDefEnabled(module.assemblyDefPath);
-                
-                string asmdefStatus = asmdefFileExists ? 
-                    (asmdefIsEnabled ? "Assembly: ✓ 啟用" : "Assembly: ✗ 受限") : 
-                    "Assembly: ⚠ 檔案不存在";
-                    
-                var asmdefStyle = new GUIStyle(EditorStyles.miniLabel);
-                asmdefStyle.normal.textColor = asmdefFileExists ? 
-                    (asmdefIsEnabled ? new Color(0.3f, 0.8f, 0.3f) : Color.red) : 
-                    Color.yellow;
-                    
-                EditorGUILayout.LabelField(asmdefStatus, asmdefStyle);
-                EditorGUILayout.EndHorizontal();
-            }
             
             // 相依性檢查
             if (module.dependencies.Length > 0 || !string.IsNullOrEmpty(module.packageDependency))
@@ -367,38 +309,8 @@ namespace GSGUnityUtilities.Editor
                     CleanupUnusedDefineSymbols();
                 }
                 
-                EditorGUILayout.Space(10);
-                
-                // Assembly Define 區域
-                EditorGUILayout.LabelField("⚙️ Assembly Define 狀態", EditorStyles.boldLabel);
-                
-                foreach (var module in modules)
-                {
-                    if (!string.IsNullOrEmpty(module.assemblyDefPath))
-                    {
-                        EditorGUILayout.BeginHorizontal();
-                        
-                        bool exists = File.Exists(module.assemblyDefPath);
-                        bool enabled = IsAssemblyDefEnabled(module.assemblyDefPath);
-                        
-                        string statusIcon = exists ? (enabled ? "✓" : "✗") : "⚠";
-                        Color statusColor = exists ? (enabled ? Color.green : Color.red) : Color.yellow;
-                        
-                        var statusStyle = new GUIStyle(EditorStyles.miniLabel);
-                        statusStyle.normal.textColor = statusColor;
-                        
-                        EditorGUILayout.LabelField(statusIcon, statusStyle, GUILayout.Width(15));
-                        EditorGUILayout.LabelField(module.assemblyName, EditorStyles.miniLabel);
-                        
-                        string statusText = exists ? (enabled ? "啟用" : "受限") : "檔案不存在";
-                        EditorGUILayout.LabelField(statusText, statusStyle);
-                        
-                        EditorGUILayout.EndHorizontal();
-                    }
-                }
-                
                 EditorGUILayout.Space(5);
-                EditorGUILayout.HelpBox("💡 提示：此模組管理器現在同時控制 Define Symbols 和 Assembly Define 檔案。\n• Define Symbols 控制條件編譯 (#if)\n• Assembly Define 控制 Assembly 的載入和編譯", MessageType.Info);
+                EditorGUILayout.HelpBox("💡 提示：此版本僅使用 Define Symbols 控制模組啟用/停用。\n• 插件的 Assembly Define 檔案已預設配置為使用這些符號作為條件編譯約束\n• 這樣可以確保在 Package Manager 安裝的只讀插件中正常工作", MessageType.Info);
                 
                 EditorGUILayout.EndVertical();
             }
@@ -410,120 +322,6 @@ namespace GSGUnityUtilities.Editor
             foreach (var module in modules)
             {
                 module.isEnabled = module.isCore || symbols.Contains(module.defineSymbol);
-                
-                // 同時檢查 Assembly Define 檔案是否存在且啟用
-                if (!string.IsNullOrEmpty(module.assemblyDefPath))
-                {
-                    bool asmdefExists = File.Exists(module.assemblyDefPath);
-                    bool asmdefEnabled = IsAssemblyDefEnabled(module.assemblyDefPath);
-                    
-                    // 如果 Assembly Define 被停用，模組也應該被視為停用
-                    if (!asmdefEnabled && !module.isCore)
-                    {
-                        module.isEnabled = false;
-                    }
-                }
-            }
-        }
-        
-        /// <summary>
-        /// 檢查 Assembly Define 檔案是否啟用
-        /// </summary>
-        private bool IsAssemblyDefEnabled(string asmdefPath)
-        {
-            if (!File.Exists(asmdefPath))
-                return false;
-                
-            try
-            {
-                string content = File.ReadAllText(asmdefPath);
-                
-                // 簡單的字串檢查是否包含 defineConstraints
-                if (content.Contains("\"defineConstraints\""))
-                {
-                    // 如果包含 defineConstraints，檢查是否為空陣列
-                    if (content.Contains("\"defineConstraints\": []") || 
-                        content.Contains("\"defineConstraints\":[]"))
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        // 包含約束，需要檢查是否滿足
-                        return false; // 暫時簡化為停用
-                    }
-                }
-                
-                return true; // 沒有約束就是啟用
-            }
-            catch
-            {
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// 啟用或停用 Assembly Define 檔案
-        /// </summary>
-        private void SetAssemblyDefEnabled(ModuleInfo module, bool enabled)
-        {
-            if (string.IsNullOrEmpty(module.assemblyDefPath) || module.isCore)
-                return;
-                
-            try
-            {
-                string content = File.ReadAllText(module.assemblyDefPath);
-                
-                if (enabled)
-                {
-                    // 啟用：移除 defineConstraints 或設定為空陣列
-                    if (content.Contains("\"defineConstraints\""))
-                    {
-                        // 簡單的字串替換，將約束設為空陣列
-                        content = System.Text.RegularExpressions.Regex.Replace(
-                            content, 
-                            "\"defineConstraints\"\\s*:\\s*\\[[^\\]]*\\]", 
-                            "\"defineConstraints\": []"
-                        );
-                    }
-                }
-                else
-                {
-                    // 停用：添加 defineConstraints 約束
-                    string disableConstraint = "GSG_MODULE_DISABLED_" + module.assemblyName.ToUpper().Replace(".", "_");
-                    
-                    if (content.Contains("\"defineConstraints\""))
-                    {
-                        // 替換現有的 defineConstraints
-                        content = System.Text.RegularExpressions.Regex.Replace(
-                            content,
-                            "\"defineConstraints\"\\s*:\\s*\\[[^\\]]*\\]",
-                            $"\"defineConstraints\": [\"{disableConstraint}\"]"
-                        );
-                    }
-                    else
-                    {
-                        // 添加新的 defineConstraints
-                        content = content.TrimEnd();
-                        if (content.EndsWith("}"))
-                        {
-                            content = content.Substring(0, content.Length - 1);
-                            content += $",\n    \"defineConstraints\": [\"{disableConstraint}\"]\n}}";
-                        }
-                    }
-                }
-                
-                // 寫回檔案
-                File.WriteAllText(module.assemblyDefPath, content);
-                
-                // 刷新 Asset Database
-                AssetDatabase.Refresh();
-                
-                Debug.Log($"GSG Module Manager: {(enabled ? "啟用" : "停用")} {module.name} Assembly Define");
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError($"GSG Module Manager: 無法修改 {module.name} 的 Assembly Define: {e.Message}");
             }
         }
         
@@ -531,7 +329,6 @@ namespace GSGUnityUtilities.Editor
         {
             var currentSymbols = GetCurrentDefineSymbols().ToList();
             bool hasChanges = false;
-            bool hasAssemblyChanges = false;
             
             foreach (var module in modules)
             {
@@ -610,32 +407,13 @@ namespace GSGUnityUtilities.Editor
                     currentSymbols.Remove(module.defineSymbol);
                     hasChanges = true;
                 }
-                
-                // 處理 Assembly Define 檔案
-                if (!string.IsNullOrEmpty(module.assemblyDefPath))
-                {
-                    bool currentlyEnabled = IsAssemblyDefEnabled(module.assemblyDefPath);
-                    if (module.isEnabled != currentlyEnabled)
-                    {
-                        SetAssemblyDefEnabled(module, module.isEnabled);
-                        hasAssemblyChanges = true;
-                    }
-                }
             }
             
-            if (hasChanges || hasAssemblyChanges)
+            if (hasChanges)
             {
-                if (hasChanges)
-                {
-                    SetDefineSymbols(currentSymbols.ToArray());
-                }
+                SetDefineSymbols(currentSymbols.ToArray());
                 
                 string message = "模組設定已成功套用！";
-                if (hasAssemblyChanges)
-                {
-                    message += "\nAssembly Define 檔案也已更新。";
-                }
-                
                 Debug.Log("[GSG Module Manager] " + message);
                 EditorUtility.DisplayDialog("設定完成", message, "確定");
                 
@@ -654,9 +432,9 @@ namespace GSGUnityUtilities.Editor
             {
                 // 重設為預設狀態
                 modules[0].isEnabled = true;  // Core
-                modules[1].isEnabled = false; // Steamworks
-                modules[2].isEnabled = true;  // File Browser
-                modules[3].isEnabled = true;  // Editor Tools
+                modules[1].isEnabled = true;  // UI Extensions  
+                modules[2].isEnabled = false; // Steamworks
+                modules[3].isEnabled = true;  // File Browser
                 
                 ApplyModuleSettings();
             }
