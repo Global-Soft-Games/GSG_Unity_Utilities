@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace GSGUnityUtilities.Editor.Tools
 {
@@ -21,6 +22,7 @@ namespace GSGUnityUtilities.Editor.Tools
         private int superSize = 1;
         private bool includeUI = true;
         private bool autoOpenFolder = true;
+        private ScreenshotMode screenshotMode = ScreenshotMode.GameView;
         
         // 解析度預設
         private List<ResolutionPreset> resolutionPresets = new List<ResolutionPreset>();
@@ -41,6 +43,13 @@ namespace GSGUnityUtilities.Editor.Tools
         {
             PNG,
             JPG
+        }
+        
+        public enum ScreenshotMode
+        {
+            FullScreen,
+            GameView,
+            Camera
         }
         
         [System.Serializable]
@@ -131,6 +140,23 @@ namespace GSGUnityUtilities.Editor.Tools
             // 檔案名稱前綴
             fileNamePrefix = EditorGUILayout.TextField("檔名前綴", fileNamePrefix);
             
+            // 截圖模式
+            screenshotMode = (ScreenshotMode)EditorGUILayout.EnumPopup("截圖模式", screenshotMode);
+            
+            // 顯示模式說明
+            switch (screenshotMode)
+            {
+                case ScreenshotMode.FullScreen:
+                    EditorGUILayout.HelpBox("全螢幕截圖：捕獲整個螢幕畫面", MessageType.Info);
+                    break;
+                case ScreenshotMode.GameView:
+                    EditorGUILayout.HelpBox("GameView 截圖：僅捕獲 Unity GameView 窗口內容 (推薦)", MessageType.Info);
+                    break;
+                case ScreenshotMode.Camera:
+                    EditorGUILayout.HelpBox("攝影機截圖：使用指定攝影機進行渲染截圖", MessageType.Info);
+                    break;
+            }
+            
             // 圖片格式
             imageFormat = (ImageFormat)EditorGUILayout.EnumPopup("圖片格式", imageFormat);
             
@@ -140,9 +166,17 @@ namespace GSGUnityUtilities.Editor.Tools
                 jpegQuality = EditorGUILayout.IntSlider("JPG 品質", jpegQuality, 1, 100);
             }
             
-            // 超採樣倍數
+            // 超採樣倍數（僅在非GameView模式下顯示詳細說明）
             superSize = EditorGUILayout.IntSlider("超採樣倍數", superSize, 1, 4);
-            EditorGUILayout.HelpBox($"當前解析度: {Screen.width * superSize} x {Screen.height * superSize}", MessageType.None);
+            
+            if (screenshotMode == ScreenshotMode.GameView)
+            {
+                EditorGUILayout.HelpBox("GameView 模式：超採樣將應用於 Game 視窗的渲染解析度", MessageType.None);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox($"當前解析度: {Screen.width * superSize} x {Screen.height * superSize}", MessageType.None);
+            }
             
             // 其他選項
             includeUI = EditorGUILayout.Toggle("包含 UI", includeUI);
@@ -222,15 +256,22 @@ namespace GSGUnityUtilities.Editor.Tools
             {
                 EditorGUILayout.BeginVertical("box");
                 
-                // 攝影機設定
-                useSpecificCamera = EditorGUILayout.Toggle("使用指定攝影機", useSpecificCamera);
-                if (useSpecificCamera)
+                // 攝影機設定（僅在攝影機模式下顯示）
+                if (screenshotMode == ScreenshotMode.Camera)
                 {
-                    selectedCamera = (Camera)EditorGUILayout.ObjectField("目標攝影機", selectedCamera, typeof(Camera), true);
-                    if (selectedCamera == null)
+                    useSpecificCamera = EditorGUILayout.Toggle("使用指定攝影機", useSpecificCamera);
+                    if (useSpecificCamera)
                     {
-                        EditorGUILayout.HelpBox("請選擇一個攝影機", MessageType.Warning);
+                        selectedCamera = (Camera)EditorGUILayout.ObjectField("目標攝影機", selectedCamera, typeof(Camera), true);
+                        if (selectedCamera == null)
+                        {
+                            EditorGUILayout.HelpBox("請選擇一個攝影機", MessageType.Warning);
+                        }
                     }
+                }
+                else if (screenshotMode == ScreenshotMode.GameView)
+                {
+                    EditorGUILayout.HelpBox("GameView 模式會自動捕獲 Game 視窗的內容，無需指定攝影機", MessageType.Info);
                 }
                 
                 EditorGUILayout.EndVertical();
@@ -315,9 +356,10 @@ namespace GSGUnityUtilities.Editor.Tools
         
         private void TakeSingleScreenshot()
         {
-            if (!Application.isPlaying)
+            // GameView 截圖不需要播放模式
+            if (screenshotMode != ScreenshotMode.GameView && !Application.isPlaying)
             {
-                EditorUtility.DisplayDialog("錯誤", "截圖功能需要在播放模式下使用！", "確定");
+                EditorUtility.DisplayDialog("錯誤", "全螢幕和攝影機截圖需要在播放模式下使用！", "確定");
                 return;
             }
             
@@ -327,29 +369,50 @@ namespace GSGUnityUtilities.Editor.Tools
             
             try
             {
-                // 如果使用指定攝影機或需要自訂解析度，使用 RenderTexture 方法
-                if (useSpecificCamera && selectedCamera != null)
+                switch (screenshotMode)
                 {
-                    CaptureWithCamera(selectedCamera, fullPath, Screen.width * superSize, Screen.height * superSize);
-                }
-                else if (superSize > 1)
-                {
-                    // 超採樣需要使用攝影機方法
-                    Camera targetCamera = Camera.main ?? FindObjectOfType<Camera>();
-                    if (targetCamera != null)
-                    {
-                        CaptureWithCamera(targetCamera, fullPath, Screen.width * superSize, Screen.height * superSize);
-                    }
-                    else
-                    {
-                        // 沒有攝影機時回退到系統截圖
-                        ScreenCapture.CaptureScreenshot(fullPath, superSize);
-                    }
-                }
-                else
-                {
-                    // 預設使用系統截圖（最快速）
-                    ScreenCapture.CaptureScreenshot(fullPath);
+                    case ScreenshotMode.GameView:
+                        CaptureGameView(fullPath);
+                        break;
+                        
+                    case ScreenshotMode.Camera:
+                        if (useSpecificCamera && selectedCamera != null)
+                        {
+                            CaptureWithCamera(selectedCamera, fullPath, Screen.width * superSize, Screen.height * superSize);
+                        }
+                        else
+                        {
+                            Camera targetCamera = Camera.main ?? FindObjectOfType<Camera>();
+                            if (targetCamera != null)
+                            {
+                                CaptureWithCamera(targetCamera, fullPath, Screen.width * superSize, Screen.height * superSize);
+                            }
+                            else
+                            {
+                                EditorUtility.DisplayDialog("錯誤", "找不到可用的攝影機！", "確定");
+                                return;
+                            }
+                        }
+                        break;
+                        
+                    case ScreenshotMode.FullScreen:
+                        if (superSize > 1)
+                        {
+                            Camera targetCamera = Camera.main ?? FindObjectOfType<Camera>();
+                            if (targetCamera != null)
+                            {
+                                CaptureWithCamera(targetCamera, fullPath, Screen.width * superSize, Screen.height * superSize);
+                            }
+                            else
+                            {
+                                ScreenCapture.CaptureScreenshot(fullPath, superSize);
+                            }
+                        }
+                        else
+                        {
+                            ScreenCapture.CaptureScreenshot(fullPath);
+                        }
+                        break;
                 }
                 
                 Debug.Log($"截圖已儲存: {fullPath}");
@@ -370,9 +433,10 @@ namespace GSGUnityUtilities.Editor.Tools
         
         private void TakeBatchScreenshots()
         {
-            if (!Application.isPlaying)
+            // GameView 截圖不需要播放模式
+            if (screenshotMode != ScreenshotMode.GameView && !Application.isPlaying)
             {
-                EditorUtility.DisplayDialog("錯誤", "截圖功能需要在播放模式下使用！", "確定");
+                EditorUtility.DisplayDialog("錯誤", "全螢幕和攝影機截圖需要在播放模式下使用！", "確定");
                 return;
             }
             
@@ -383,17 +447,35 @@ namespace GSGUnityUtilities.Editor.Tools
                 return;
             }
             
-            // 尋找主攝影機，如果沒有指定攝影機的話
-            Camera targetCamera = useSpecificCamera ? selectedCamera : Camera.main;
-            if (targetCamera == null)
-            {
-                targetCamera = FindObjectOfType<Camera>();
-            }
+            Camera targetCamera = null;
             
-            if (targetCamera == null)
+            // 根據截圖模式準備攝影機
+            if (screenshotMode == ScreenshotMode.Camera || screenshotMode == ScreenshotMode.GameView)
             {
-                EditorUtility.DisplayDialog("錯誤", "找不到可用的攝影機進行截圖！請在場景中放置一個攝影機或在進階設定中指定攝影機。", "確定");
-                return;
+                if (screenshotMode == ScreenshotMode.Camera)
+                {
+                    targetCamera = useSpecificCamera ? selectedCamera : Camera.main;
+                    if (targetCamera == null)
+                    {
+                        targetCamera = FindObjectOfType<Camera>();
+                    }
+                }
+                else // GameView mode
+                {
+                    targetCamera = Camera.main;
+                    if (targetCamera == null)
+                    {
+                        var cameras = FindObjectsOfType<Camera>();
+                        targetCamera = cameras.FirstOrDefault(c => c.enabled && c.gameObject.activeInHierarchy);
+                    }
+                }
+                
+                if (targetCamera == null)
+                {
+                    string modeText = screenshotMode == ScreenshotMode.Camera ? "攝影機" : "GameView";
+                    EditorUtility.DisplayDialog("錯誤", $"找不到可用的攝影機進行{modeText}截圖！請在場景中放置一個攝影機。", "確定");
+                    return;
+                }
             }
             
             CreateScreenshotFolder();
@@ -414,8 +496,31 @@ namespace GSGUnityUtilities.Editor.Tools
                     string fileName = $"{baseName}_{preset.name}_{preset.width}x{preset.height}{GetFileExtension()}";
                     string fullPath = Path.Combine(GetScreenshotFolder(), fileName);
                     
-                    // 使用 RenderTexture 方法來實現真正的自訂解析度截圖
-                    CaptureWithCamera(targetCamera, fullPath, preset.width, preset.height);
+                    // 根據截圖模式使用不同的方法
+                    switch (screenshotMode)
+                    {
+                        case ScreenshotMode.GameView:
+                            CaptureGameViewWithResolution(fullPath, preset.width, preset.height);
+                            break;
+                        case ScreenshotMode.Camera:
+                            CaptureWithCamera(targetCamera, fullPath, preset.width, preset.height);
+                            break;
+                        case ScreenshotMode.FullScreen:
+                            // 全螢幕模式在批次截圖時依然使用攝影機方法來實現自訂解析度
+                            if (targetCamera == null)
+                            {
+                                targetCamera = Camera.main ?? FindObjectOfType<Camera>();
+                            }
+                            if (targetCamera != null)
+                            {
+                                CaptureWithCamera(targetCamera, fullPath, preset.width, preset.height);
+                            }
+                            else
+                            {
+                                throw new System.Exception("找不到攝影機進行全螢幕截圖");
+                            }
+                            break;
+                    }
                     
                     successCount++;
                     Debug.Log($"截圖已儲存: {fileName}");
@@ -438,6 +543,163 @@ namespace GSGUnityUtilities.Editor.Tools
             if (autoOpenFolder && successCount > 0)
             {
                 OpenScreenshotFolder();
+            }
+        }
+        
+        private void CaptureGameView(string path)
+        {
+            // 尋找 GameView 窗口
+            var gameViewType = Type.GetType("UnityEditor.GameView,UnityEditor");
+            var gameView = EditorWindow.GetWindow(gameViewType, false, null, false);
+            
+            if (gameView == null)
+            {
+                EditorUtility.DisplayDialog("錯誤", "找不到 GameView 窗口！請確保 Game 視窗已開啟。", "確定");
+                return;
+            }
+            
+            // 獲取 GameView 的大小
+            var sizeField = gameViewType.GetField("m_Parent", BindingFlags.Instance | BindingFlags.NonPublic);
+            var parentView = sizeField?.GetValue(gameView);
+            
+            Rect gameViewRect = gameView.position;
+            
+            // 獲取實際渲染的解析度
+            var getCurrentGameViewSizeMethod = gameViewType.GetMethod("GetMainGameViewTargetSize", BindingFlags.NonPublic | BindingFlags.Static);
+            Vector2 gameViewSize = (Vector2)getCurrentGameViewSizeMethod.Invoke(null, null);
+            
+            int width = Mathf.RoundToInt(gameViewSize.x * superSize);
+            int height = Mathf.RoundToInt(gameViewSize.y * superSize);
+            
+            // 建立 RenderTexture
+            RenderTexture renderTexture = new RenderTexture(width, height, 24);
+            RenderTexture originalActive = RenderTexture.active;
+            
+            try
+            {
+                // 尋找 Game 視窗中使用的攝影機
+                Camera gameCamera = Camera.main;
+                if (gameCamera == null)
+                {
+                    var cameras = FindObjectsOfType<Camera>();
+                    gameCamera = cameras.FirstOrDefault(c => c.enabled && c.gameObject.activeInHierarchy);
+                }
+                
+                if (gameCamera == null)
+                {
+                    EditorUtility.DisplayDialog("錯誤", "找不到可用的攝影機進行 GameView 截圖！", "確定");
+                    return;
+                }
+                
+                // 保存原始設定
+                RenderTexture originalTexture = gameCamera.targetTexture;
+                
+                // 設定攝影機渲染到 RenderTexture
+                gameCamera.targetTexture = renderTexture;
+                gameCamera.Render();
+                
+                // 從 RenderTexture 讀取像素
+                RenderTexture.active = renderTexture;
+                Texture2D screenshot = new Texture2D(width, height, TextureFormat.RGB24, false);
+                screenshot.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                screenshot.Apply();
+                
+                // 編碼並保存
+                byte[] data;
+                if (imageFormat == ImageFormat.PNG)
+                {
+                    data = screenshot.EncodeToPNG();
+                }
+                else
+                {
+                    data = screenshot.EncodeToJPG(jpegQuality);
+                }
+                
+                File.WriteAllBytes(path, data);
+                
+                // 清理
+                DestroyImmediate(screenshot);
+                gameCamera.targetTexture = originalTexture;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"GameView 截圖失敗: {e.Message}");
+                throw;
+            }
+            finally
+            {
+                RenderTexture.active = originalActive;
+                if (renderTexture != null)
+                {
+                    DestroyImmediate(renderTexture);
+                }
+            }
+        }
+        
+        private void CaptureGameViewWithResolution(string path, int width, int height)
+        {
+            // 建立 RenderTexture
+            RenderTexture renderTexture = new RenderTexture(width, height, 24);
+            RenderTexture originalActive = RenderTexture.active;
+            
+            try
+            {
+                // 尋找 Game 視窗中使用的攝影機
+                Camera gameCamera = Camera.main;
+                if (gameCamera == null)
+                {
+                    var cameras = FindObjectsOfType<Camera>();
+                    gameCamera = cameras.FirstOrDefault(c => c.enabled && c.gameObject.activeInHierarchy);
+                }
+                
+                if (gameCamera == null)
+                {
+                    EditorUtility.DisplayDialog("錯誤", "找不到可用的攝影機進行 GameView 截圖！", "確定");
+                    return;
+                }
+                
+                // 保存原始設定
+                RenderTexture originalTexture = gameCamera.targetTexture;
+                
+                // 設定攝影機渲染到 RenderTexture
+                gameCamera.targetTexture = renderTexture;
+                gameCamera.Render();
+                
+                // 從 RenderTexture 讀取像素
+                RenderTexture.active = renderTexture;
+                Texture2D screenshot = new Texture2D(width, height, TextureFormat.RGB24, false);
+                screenshot.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                screenshot.Apply();
+                
+                // 編碼並保存
+                byte[] data;
+                if (imageFormat == ImageFormat.PNG)
+                {
+                    data = screenshot.EncodeToPNG();
+                }
+                else
+                {
+                    data = screenshot.EncodeToJPG(jpegQuality);
+                }
+                
+                File.WriteAllBytes(path, data);
+                
+                // 清理
+                DestroyImmediate(screenshot);
+                gameCamera.targetTexture = originalTexture;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"GameView 自訂解析度截圖失敗: {e.Message}");
+                throw;
+            }
+            finally
+            {
+                RenderTexture.active = originalActive;
+                if (renderTexture != null)
+                {
+                    DestroyImmediate(renderTexture);
+                }
             }
         }
         
@@ -592,6 +854,7 @@ namespace GSGUnityUtilities.Editor.Tools
             EditorPrefs.SetInt("GSG_Screenshot_SuperSize", superSize);
             EditorPrefs.SetBool("GSG_Screenshot_IncludeUI", includeUI);
             EditorPrefs.SetBool("GSG_Screenshot_AutoOpen", autoOpenFolder);
+            EditorPrefs.SetInt("GSG_Screenshot_Mode", (int)screenshotMode);
             EditorPrefs.SetBool("GSG_Screenshot_EnableHotkey", enableHotkey);
             EditorPrefs.SetInt("GSG_Screenshot_HotkeyKey", (int)screenshotKey);
             EditorPrefs.SetBool("GSG_Screenshot_RequireCtrl", requireCtrl);
@@ -607,6 +870,7 @@ namespace GSGUnityUtilities.Editor.Tools
             superSize = EditorPrefs.GetInt("GSG_Screenshot_SuperSize", 1);
             includeUI = EditorPrefs.GetBool("GSG_Screenshot_IncludeUI", true);
             autoOpenFolder = EditorPrefs.GetBool("GSG_Screenshot_AutoOpen", true);
+            screenshotMode = (ScreenshotMode)EditorPrefs.GetInt("GSG_Screenshot_Mode", (int)ScreenshotMode.GameView);
             enableHotkey = EditorPrefs.GetBool("GSG_Screenshot_EnableHotkey", true);
             screenshotKey = (KeyCode)EditorPrefs.GetInt("GSG_Screenshot_HotkeyKey", (int)KeyCode.F12);
             requireCtrl = EditorPrefs.GetBool("GSG_Screenshot_RequireCtrl", false);
