@@ -550,23 +550,48 @@ namespace GSGUnityUtilities.Editor.Tools
         {
             // 尋找 GameView 窗口
             var gameViewType = Type.GetType("UnityEditor.GameView,UnityEditor");
-            var gameView = EditorWindow.GetWindow(gameViewType, false, null, false);
+            if (gameViewType == null)
+            {
+                EditorUtility.DisplayDialog("錯誤", "無法找到 GameView 類型！", "確定");
+                return;
+            }
             
+            var gameView = EditorWindow.GetWindow(gameViewType, false, null, false);
             if (gameView == null)
             {
                 EditorUtility.DisplayDialog("錯誤", "找不到 GameView 窗口！請確保 Game 視窗已開啟。", "確定");
                 return;
             }
             
-            // 獲取 GameView 的大小
-            var sizeField = gameViewType.GetField("m_Parent", BindingFlags.Instance | BindingFlags.NonPublic);
-            var parentView = sizeField?.GetValue(gameView);
-            
-            Rect gameViewRect = gameView.position;
-            
             // 獲取實際渲染的解析度
-            var getCurrentGameViewSizeMethod = gameViewType.GetMethod("GetMainGameViewTargetSize", BindingFlags.NonPublic | BindingFlags.Static);
-            Vector2 gameViewSize = (Vector2)getCurrentGameViewSizeMethod.Invoke(null, null);
+            Vector2 gameViewSize;
+            try
+            {
+                // 嘗試不同的方法名稱來獲取GameView大小
+                var getCurrentGameViewSizeMethod = gameViewType.GetMethod("GetMainGameViewTargetSize", BindingFlags.NonPublic | BindingFlags.Static);
+                if (getCurrentGameViewSizeMethod == null)
+                {
+                    // 嘗試另一個可能的方法名稱
+                    getCurrentGameViewSizeMethod = gameViewType.GetMethod("GetGameViewTargetSize", BindingFlags.NonPublic | BindingFlags.Static);
+                }
+                
+                if (getCurrentGameViewSizeMethod != null)
+                {
+                    gameViewSize = (Vector2)getCurrentGameViewSizeMethod.Invoke(null, null);
+                }
+                else
+                {
+                    // 如果反射失敗，使用默認解析度
+                    gameViewSize = new Vector2(1920, 1080);
+                    Debug.LogWarning("無法獲取 GameView 解析度，使用默認值 1920x1080");
+                }
+            }
+            catch (Exception e)
+            {
+                // 如果反射調用失敗，使用默認解析度
+                gameViewSize = new Vector2(1920, 1080);
+                Debug.LogWarning($"獲取 GameView 解析度失敗，使用默認值: {e.Message}");
+            }
             
             int width = Mathf.RoundToInt(gameViewSize.x * superSize);
             int height = Mathf.RoundToInt(gameViewSize.y * superSize);
@@ -638,8 +663,31 @@ namespace GSGUnityUtilities.Editor.Tools
         
         private void CaptureGameViewWithResolution(string path, int width, int height)
         {
+            // 驗證輸入參數
+            if (width <= 0 || height <= 0)
+            {
+                EditorUtility.DisplayDialog("錯誤", "無效的解析度設定！", "確定");
+                return;
+            }
+            
+            if (string.IsNullOrEmpty(path))
+            {
+                EditorUtility.DisplayDialog("錯誤", "無效的檔案路徑！", "確定");
+                return;
+            }
+            
             // 建立 RenderTexture
-            RenderTexture renderTexture = new RenderTexture(width, height, 24);
+            RenderTexture renderTexture = null;
+            try
+            {
+                renderTexture = new RenderTexture(width, height, 24);
+            }
+            catch (Exception e)
+            {
+                EditorUtility.DisplayDialog("錯誤", $"無法建立 RenderTexture: {e.Message}", "確定");
+                return;
+            }
+            
             RenderTexture originalActive = RenderTexture.active;
             
             try
@@ -649,12 +697,12 @@ namespace GSGUnityUtilities.Editor.Tools
                 if (gameCamera == null)
                 {
                     var cameras = FindObjectsOfType<Camera>();
-                    gameCamera = cameras.FirstOrDefault(c => c.enabled && c.gameObject.activeInHierarchy);
+                    gameCamera = cameras?.FirstOrDefault(c => c != null && c.enabled && c.gameObject.activeInHierarchy);
                 }
                 
                 if (gameCamera == null)
                 {
-                    EditorUtility.DisplayDialog("錯誤", "找不到可用的攝影機進行 GameView 截圖！", "確定");
+                    EditorUtility.DisplayDialog("錯誤", "找不到可用的攝影機進行 GameView 截圖！請在場景中添加一個攝影機。", "確定");
                     return;
                 }
                 
@@ -705,8 +753,37 @@ namespace GSGUnityUtilities.Editor.Tools
         
         private void CaptureWithCamera(Camera camera, string path, int width, int height)
         {
+            // 驗證輸入參數
+            if (camera == null)
+            {
+                EditorUtility.DisplayDialog("錯誤", "攝影機引用為空！", "確定");
+                return;
+            }
+            
+            if (width <= 0 || height <= 0)
+            {
+                EditorUtility.DisplayDialog("錯誤", "無效的解析度設定！", "確定");
+                return;
+            }
+            
+            if (string.IsNullOrEmpty(path))
+            {
+                EditorUtility.DisplayDialog("錯誤", "無效的檔案路徑！", "確定");
+                return;
+            }
+            
             // 建立 RenderTexture
-            RenderTexture renderTexture = new RenderTexture(width, height, 24);
+            RenderTexture renderTexture = null;
+            try
+            {
+                renderTexture = new RenderTexture(width, height, 24);
+            }
+            catch (Exception e)
+            {
+                EditorUtility.DisplayDialog("錯誤", $"無法建立 RenderTexture: {e.Message}", "確定");
+                return;
+            }
+            
             RenderTexture originalTexture = camera.targetTexture;
             RenderTexture originalActive = RenderTexture.active;
             
