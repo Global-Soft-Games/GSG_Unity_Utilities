@@ -1,6 +1,6 @@
 {
     "name": "com.globalsoft.unityutilities",
-    "version": "1.0.20.1",
+    "version": "1.0.21",
     "displayName": "Global Soft Games Unity Utilities",
     "description": "模組化 Unity 工具包，支援動態 Assembly Define 管理、專業截圖工具（含 GameView 支援）、Steamworks 整合、檔案瀏覽器等功能。",
     "unity": "2022.3",
