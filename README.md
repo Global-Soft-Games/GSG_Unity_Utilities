@@ -23,6 +23,7 @@
 - **📱 動畫系統** - 靈活的補間動畫工具
 - **🎨 UI 工具** - 豐富的 UI 互動組件
 - **📁 檔案處理** - 跨平台檔案瀏覽器
+- **📸 截圖工具** - 專為遊戲上架素材準備的截圖工具
 - **⚙️ 編輯器工具** - 提升開發效率的編輯器擴展
 
 ### 🚀 Steam 整合 (可選)
@@ -144,6 +145,23 @@ SteamAchievementManager.Instance.ListAllAchievements();
   - ✅ **完全啟用** - Define Symbol + Assembly 都啟用
   - ⚠️ **部分啟用** - 僅 Define Symbol 啟用
   - ❌ **完全停用** - 兩者都停用
+
+### 📸 截圖工具 (NEW!)
+- **位置**: `Tools > GSG Unity Utilities > Screenshot Tool`
+- **功能**:
+  - 單張/批次截圖功能
+  - 預設 Steam 商店頁面解析度
+  - 支援自訂解析度配置
+  - 指定攝影機截圖
+  - 多種圖片格式 (PNG/JPG)
+  - 快捷鍵支援 (預設 F12)
+  - 自動開啟截圖資料夾
+- **預設解析度**:
+  - Steam Header (460x215)
+  - Steam Screenshot (1920x1080)
+  - Steam Capsule (多種尺寸)
+  - 4K/2K/Full HD
+  - 行動裝置解析度
 
 ### 🔒 Inspector 鎖定工具
 - **快捷鍵**: `Ctrl+L` (Windows) / `Cmd+L` (Mac)

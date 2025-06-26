@@ -7,6 +7,49 @@
 
 ---
 
+## [1.0.19] - 2025-06-26 📸
+
+### ✨ 新增
+- **📸 截圖工具 (Screenshot Tool)**
+  - 全新的編輯器截圖工具，專為遊戲上架素材準備
+  - 位置：`Tools > GSG Unity Utilities > Screenshot Tool`
+  - 支援單張和批次截圖功能
+  - 預設多種 Steam 商店頁面解析度配置
+  - 支援自訂解析度預設管理
+  - 指定攝影機截圖功能
+  - 多種圖片格式支援 (PNG/JPG)
+  - 可調整 JPG 品質和超採樣倍數
+  - 快捷鍵支援（預設 F12，可自訂）
+  - 自動建立和開啟截圖資料夾
+  - 設定記憶功能（EditorPrefs）
+
+### 🏗️ 架構優化
+- **📁 編輯器資料夾重組**
+  - 建立 `Editor/Tools/` 資料夾存放工具類
+  - 建立 `Editor/Modules/` 資料夾存放模組管理器
+  - 建立 `Editor/Inspectors/` 資料夾存放檢視器繪製器
+  - 重新組織現有編輯器檔案到對應分類資料夾
+
+### 🎯 預設配置
+- **🎮 Steam 平台解析度**
+  - Steam Header: 460x215
+  - Steam Screenshot: 1920x1080
+  - Steam Capsule Small: 231x87
+  - Steam Capsule Medium: 467x181
+  - Steam Capsule Large: 616x353
+- **📱 常用解析度**
+  - 4K Ultra HD: 3840x2160
+  - 2K QHD: 2560x1440
+  - Full HD: 1920x1080
+  - HD Ready: 1280x720
+  - 行動裝置直向/橫向解析度
+
+### 📖 文檔更新
+- 更新 README.md 新增截圖工具說明
+- 新增使用指南和功能介紹
+
+---
+
 ## [1.0.18] - 2025-01-15 🚨
 
 ### 🚨 重大修復
